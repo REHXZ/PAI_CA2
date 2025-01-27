@@ -3,7 +3,7 @@ import os
 import json
 import time
 import mlflow
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -59,6 +59,7 @@ class BaseExperimentTracker:
             "recall": recall_score(y_true, y_pred),
             "f1_score": f1_score(y_true, y_pred),
             "roc_auc": roc_auc_score(y_true, y_prob),
+            "classification_report": classification_report(y_true, y_pred, output_dict=True)  # Convert to dict
         }
         return metrics
     
@@ -129,3 +130,94 @@ class PhaseOneExperimentTracker(BaseExperimentTracker):
             except Exception as e:
                 print(f"Error in run {run_id}: {str(e)}")
 #               continue
+
+import pandas as pd
+from imblearn.over_sampling import SMOTE, RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+class PhaseTwoExperimentTracker(BaseExperimentTracker):
+    def __init__(self, experiment_name, outlier_techniques=None, resampling_methods=None, **kwargs):
+        super().__init__(experiment_name, **kwargs)
+        self.outlier_techniques = outlier_techniques if outlier_techniques else []
+        self.resampling_methods = resampling_methods if resampling_methods else []
+
+    def apply_outlier_techniques(self, X_train, y_train):
+        """Apply selected outlier techniques."""
+        for technique in self.outlier_techniques:
+            X_train, y_train = technique.apply(X_train, y_train)  # Assuming technique has an 'apply' method
+        return X_train, y_train
+
+    def apply_resampling(self, X_train, y_train, method):
+        """Apply resampling technique."""
+        if method == 'SMOTE':
+            smote = SMOTE()
+            X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+        elif method == 'ROS':
+            ros = RandomOverSampler()
+            X_resampled, y_resampled = ros.fit_resample(X_train, y_train)
+        elif method == 'RUS':
+            rus = RandomUnderSampler()
+            X_resampled, y_resampled = rus.fit_resample(X_train, y_train)
+        return X_resampled, y_resampled
+
+    def run_experiments(self, datasets, X_test, y_test, experiment_combinations, numeric_columns, categorical_cols):
+        """Run experiments for Phase 2 on multiple datasets."""
+        for dataset_name, X_train, y_train in datasets:
+            for config in experiment_combinations:
+                run_id = self._generate_run_id(config)
+
+                # Skip if this configuration has already been run
+                if run_id in self.completed_runs:
+                    print(f"Skipping completed run: {run_id}")
+                    continue
+
+                print(f"Starting run: {run_id}")
+
+                try:
+                    with mlflow.start_run(run_name=run_id):
+                        # Add descriptive run tags
+                        mlflow.set_tag("dataset", dataset_name)
+                        mlflow.set_tag("model_type", config['models']['name'])
+                        mlflow.set_tag("scaler_type", config['scaler'].__class__.__name__)
+                        mlflow.set_tag("encoding_applied", str(config['encode']['apply']))
+
+                        # Build preprocessing steps
+                        transformers = []
+                        if config['scaler']:
+                            transformers.append(('scaler', config['scaler'], numeric_columns))
+
+                        if config['encode']['apply']:
+                            transformers.append(('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=True), categorical_cols))
+                        else:
+                            transformers.append(('drop_categorical', 'drop', categorical_cols))
+
+                        preprocessor = ColumnTransformer(transformers=transformers, remainder='passthrough')
+                        pipeline = Pipeline(steps=[
+                            ('preprocessor', preprocessor),
+                            ('model', config['models']['instance']),
+                        ])
+
+                        # Train the pipeline
+                        pipeline.fit(X_train, y_train.to_numpy().ravel())
+                        predictions = pipeline.predict(X_test)
+                        probabilities = pipeline.predict_proba(X_test)[:, 1]  # For metrics requiring probabilities
+
+                        # Evaluate metrics
+                        metrics = self.evaluate_metrics(y_test, predictions, probabilities)
+
+                        # Log parameters, metrics, and model
+                        mlflow.log_params(config)
+                        mlflow.log_metrics(metrics)
+                        mlflow.sklearn.log_model(pipeline, "model", input_example=X_train.iloc[0:1])
+
+                        # Mark this run as completed
+                        self.completed_runs.add(run_id)
+                        self._save_checkpoint()
+
+                        print(f"Completed run: {run_id}")
+
+                except Exception as e:
+                    print(f"Error in run {run_id}: {str(e)}")
+                    continue
