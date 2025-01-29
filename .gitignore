@@ -1,3 +1,4 @@
 *.csv
 mlflow_experiments
-*.json
+# pychace
+__pycache__/
