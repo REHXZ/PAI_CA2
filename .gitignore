@@ -3,3 +3,4 @@ mlflow_experiments
 # pychace
 __pycache__/
 .vscode
+*.pkl
