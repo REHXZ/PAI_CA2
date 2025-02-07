@@ -15,12 +15,12 @@ class BaseExperimentTracker:
         self.completed_runs = self._load_checkpoint()
         
         # Set the environment variables for MLflow
-        os.environ["MLFLOW_TRACKING_URI"] = "https://dagshub.com/UNiTY6969/my-first-repo.mlflow"
-        os.environ["MLFLOW_TRACKING_USERNAME"] = "UNiTY6969"
-        os.environ["MLFLOW_TRACKING_PASSWORD"] = "cbdafe9f00f18c8e02004a93d7cc250c8c67c96c"
+        os.environ["MLFLOW_TRACKING_URI"] = "https://dagshub.com/REHXZ/PAI_CA2.mlflow"
+        os.environ["MLFLOW_TRACKING_USERNAME"] = "REHXZ"
+        os.environ["MLFLOW_TRACKING_PASSWORD"] = "f70a7da81f0dca4cab7dd6d83138347b7a0d9f98"
         
         # Set MLflow tracking URI to DagsHub
-        mlflow.set_tracking_uri("https://dagshub.com/UNiTY6969/my-first-repo.mlflow")
+        mlflow.set_tracking_uri("https://dagshub.com/REHXZ/PAI_CA2.mlflow")
         
         # Create or get experiment
         try:
@@ -49,7 +49,7 @@ class BaseExperimentTracker:
         encoding_status = "Enc" if config['encode']['apply'] else "NoEnc"
         timestamp = time.strftime("%Y%m%d_%H%M")  # Add timestamp for uniqueness
         
-        return f"{model_abbr}_{scaler_abbr}_{encoding_status}"
+        return f"{model_abbr}_{scaler_abbr}_{encoding_status}_{timestamp}"
     
     def evaluate_metrics(self, y_true, y_pred, y_prob):
         """Calculate and return a dictionary of evaluation metrics."""
@@ -58,8 +58,7 @@ class BaseExperimentTracker:
             "precision": precision_score(y_true, y_pred),
             "recall": recall_score(y_true, y_pred),
             "f1_score": f1_score(y_true, y_pred),
-            "roc_auc": roc_auc_score(y_true, y_prob),
-            "classification_report": classification_report(y_true, y_pred, output_dict=True)  # Convert to dict
+            "roc_auc": roc_auc_score(y_true, y_prob)
         }
         return metrics
     
@@ -129,38 +128,9 @@ class PhaseOneExperimentTracker(BaseExperimentTracker):
             
             except Exception as e:
                 print(f"Error in run {run_id}: {str(e)}")
-#               continue
-
-import pandas as pd
-from imblearn.over_sampling import SMOTE, RandomOverSampler
-from imblearn.under_sampling import RandomUnderSampler
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+                continue
 
 class PhaseTwoExperimentTracker(BaseExperimentTracker):
-    def __init__(self, experiment_name, outlier_techniques=None, resampling_methods=None, **kwargs):
-        super().__init__(experiment_name, **kwargs)
-        self.outlier_techniques = outlier_techniques if outlier_techniques else []
-        self.resampling_methods = resampling_methods if resampling_methods else []
-
-    def apply_outlier_techniques(self, X_train, y_train):
-        """Apply selected outlier techniques."""
-        for technique in self.outlier_techniques:
-            X_train, y_train = technique.apply(X_train, y_train)  # Assuming technique has an 'apply' method
-        return X_train, y_train
-
-    def apply_resampling(self, X_train, y_train, method):
-        """Apply resampling technique."""
-        if method == 'SMOTE':
-            smote = SMOTE()
-            X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
-        elif method == 'ROS':
-            ros = RandomOverSampler()
-            X_resampled, y_resampled = ros.fit_resample(X_train, y_train)
-        elif method == 'RUS':
-            rus = RandomUnderSampler()
-            X_resampled, y_resampled = rus.fit_resample(X_train, y_train)
-        return X_resampled, y_resampled
 
     def run_experiments(self, datasets, X_test, y_test, experiment_combinations, numeric_columns, categorical_cols):
         """Run experiments for Phase 2 on multiple datasets."""
@@ -182,6 +152,29 @@ class PhaseTwoExperimentTracker(BaseExperimentTracker):
                         mlflow.set_tag("model_type", config['models']['name'])
                         mlflow.set_tag("scaler_type", config['scaler'].__class__.__name__)
                         mlflow.set_tag("encoding_applied", str(config['encode']['apply']))
+
+                        # Split dataset name
+                        dataset_names= dataset_name.split('_')
+
+                        # If contains LOF
+                        if 'LOF' in dataset_names:
+                            mlflow.set_tag("outlier_technique", "LOF")
+                        elif 'ISO' in dataset_names:
+                            mlflow.set_tag("outlier_technique", "ISO")
+                        else:
+                            mlflow.set_tag("outlier_technique", "None")
+
+                        # If containes SMOTE
+
+                        if 'SMOTE' in dataset_names:
+                            mlflow.set_tag("resampling_method", "SMOTE")
+                        elif 'ROS' in dataset_names:
+                            mlflow.set_tag("resampling_method", "ROS")
+                        elif 'RUS' in dataset_names:
+                            mlflow.set_tag("resampling_method", "RUS")
+                        else:
+                            mlflow.set_tag("resampling_method", "None")
+
 
                         # Build preprocessing steps
                         transformers = []
