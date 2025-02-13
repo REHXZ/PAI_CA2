@@ -77,6 +77,14 @@ class BaseExperimentTracker:
             "test_f1_score": f1_score(y_test, y_test_pred),
             "test_roc_auc": roc_auc_score(y_test, y_test_prob),
             "test_pr_auc": average_precision_score(y_test, y_test_prob),
+
+            "test_precision_class_0": precision_score(y_test, y_test_pred, pos_label=0),
+            "test_recall_class_0": recall_score(y_test, y_test_pred, pos_label=0),
+            "test_f1_score_class_0": f1_score(y_test, y_test_pred, pos_label=0),
+
+            "test_precision_class_1": precision_score(y_test, y_test_pred, pos_label=1),
+            "test_recall_class_1": recall_score(y_test, y_test_pred, pos_label=1),
+            "test_f1_score_class_1": f1_score(y_test, y_test_pred, pos_label=1),
         }
         return metrics
 
