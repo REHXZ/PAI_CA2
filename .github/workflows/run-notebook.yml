@@ -22,9 +22,9 @@ jobs:
         with:
           python-version: "3.9"
 
-      - name: Install dependencies
-        run: |
-          pip install papermill jupyter
+      # - name: Install dependencies
+      #   run: |
+      #     pip install papermill jupyter
 
       - name: Install Jupyter Kernel
         run: |
@@ -32,4 +32,4 @@ jobs:
 
       - name: Execute Notebook for Automated Training
         run: |
-          papermill model_training.ipynb
+          run model_training.py
