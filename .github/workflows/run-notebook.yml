@@ -28,4 +28,4 @@ jobs:
           
       - name: Run Automated Training
         run: |
-          python model_training.ipynb  # Run the script for automated training
+          papermill  model_training.ipynb  # Run the script for automated training
