@@ -1,12 +1,8 @@
 name: Run Automated Training on Data Update
 
 on:
-  push:
-    paths:
-      - "data/*"
   schedule:
-    - cron: "0 * * * *"
-
+    - cron: "*/3 * * * *"  # Runs every 3 minutes
 permissions:
   contents: write
 
