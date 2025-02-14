@@ -79,13 +79,7 @@ class BaseExperimentTracker:
             "test_roc_auc": roc_auc_score(y_test, y_test_prob),
             "test_pr_auc": average_precision_score(y_test, y_test_prob),
         }
-        return metrics
-    
-    # def log_mean_fit_time(self, total_fit_time, num_runs):
-    #     """Calculate and log the mean fit time for the model."""
-    #     mlflow.log_metric("Total_Fit_Time", total_fit_time)
-    #     mlflow.log_metric("Num_Runs", total_fit_time / num_runs)
-            
+        return metrics            
 
     def plot_learning_curves(self, pipeline, X, y, cv=5):
         """
@@ -739,3 +733,5 @@ class PhaseSevenExperimentTracker(BaseExperimentTracker):
                         print('end run')
                         mlflow.end_run()  # Ensure the run is properly ended
             client.close()
+
+
