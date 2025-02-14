@@ -39,7 +39,7 @@ engine = create_engine(connection_string)
 # Test the connection
 try:
     with engine.connect() as conn:
-        print("Connection successful!")
+        print("Connection successful :)!")
 except Exception as e:
     print(f"Error connecting to the database: {e}")
 
