@@ -62,7 +62,7 @@ def save_last_row_count(count):
 
 def get_current_row_count():
     """Query the database for the current row count."""
-    query = "SELECT COUNT(*) FROM your_table;"
+    query = "SELECT COUNT(*) FROM merged_data;"
     with engine.connect() as conn:
         result = conn.execute(text(query)).scalar()
     return result
