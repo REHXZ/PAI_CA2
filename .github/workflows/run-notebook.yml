@@ -3,9 +3,12 @@ name: Run Jupyter Notebook on Data Update
 on:
   push:
     paths:
-      - "data/*"  # Runs when data folder updates
+      - "data/*"  # Runs when any file in 'data/' folder is updated
   schedule:
     - cron: "0 * * * *"  # Runs every hour
+
+permissions:
+  contents: write  # ✅ Allow GitHub Actions to push changes
 
 jobs:
   run-notebook:
@@ -23,4 +26,14 @@ jobs:
         run: pip install jupyter pandas papermill psycopg2
 
       - name: Execute Notebook
-        run: papermill your_notebook.ipynb output_notebook.ipynb
+        run: |
+          papermill your_notebook.ipynb output_notebook.ipynb
+          ls -l  # ✅ Debugging: Check if the output notebook exists
+
+      - name: Commit and Push Results
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add output_notebook.ipynb
+          git commit -m "Updated notebook results" || echo "No changes to commit"
+          git push
