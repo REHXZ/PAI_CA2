@@ -122,4 +122,3 @@ if current_row_count > last_row_count:
 
 else:
     print("No new data. Exiting...")
-    exit(0)
