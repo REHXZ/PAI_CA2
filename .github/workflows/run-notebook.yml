@@ -24,8 +24,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install papermill
+          pip install papermill jupyter
+
+      - name: Install Jupyter Kernel
+        run: |
+          python -m ipykernel install --user --name python3 --display-name "Python 3"
 
       - name: Execute Notebook for Automated Training
         run: |
-          papermill model_training.ipynb model_training_output.ipynb
+          papermill model_training.ipynb
