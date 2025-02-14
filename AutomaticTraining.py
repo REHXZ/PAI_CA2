@@ -43,22 +43,19 @@ try:
 except Exception as e:
     print(f"Error connecting to the database: {e}")
 
-# File to store the last row count
-ROW_COUNT_FILE = "last_row_count.txt"
-
 def get_last_row_count():
-    """Read the last row count from the file."""
-    if os.path.exists(ROW_COUNT_FILE):
-        with open(ROW_COUNT_FILE, "r") as f:
-            content = f.read().strip()
-            if content.isdigit():  # Check if the content is a valid integer
-                return int(content)
-    return 0
+    query = "SELECT row_count FROM last_row_count ORDER BY id DESC LIMIT 1;"
+    with engine.connect() as conn:
+        result = conn.execute(text(query)).scalar()
+    return result or 0  # Default to 0 if no rows exist
 
 def save_last_row_count(count):
-    """Save the current row count to the file."""
-    with open(ROW_COUNT_FILE, "w") as f:
-        f.write(str(count))
+    query = """
+    INSERT INTO last_row_count (row_count) VALUES (:row_count);
+    """
+    with engine.connect() as conn:
+        conn.execute(text(query), {"row_count": count})
+        conn.commit()
 
 def get_current_row_count():
     """Query the database for the current row count."""
