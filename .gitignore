@@ -1,4 +1,4 @@
-*.csv
+*datas
 mlflow_experiments
 # pychace
 __pycache__/
