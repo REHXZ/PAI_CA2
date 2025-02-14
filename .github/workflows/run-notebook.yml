@@ -1,6 +1,9 @@
 name: Run Automated Training on Data Update
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: "*/5 * * * *"  # Runs every 5 minutes
 permissions:
