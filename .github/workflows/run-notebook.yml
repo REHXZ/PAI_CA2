@@ -28,4 +28,4 @@ jobs:
           
       - name: Run Automated Training
         run: |
-          python automatedtraining.py  # Run the script for automated training
+          python AutomatedTraining.py  # Run the script for automated training
