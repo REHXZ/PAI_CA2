@@ -1,0 +1,99 @@
+name: Run Automated Training on Data Update
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Runs every 5 minutes
+permissions:
+  contents: write
+
+jobs:
+  run-notebook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install psycopg2-binary  # Ensure PostgreSQL driver is installed
+
+      - name: Validate Environment Variables
+        run: |
+          if [ -z "${{ secrets.DB_HOST }}" ]; then
+            echo "DB_HOST is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DB_PORT }}" ]; then
+            echo "DB_PORT is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DB_NAME }}" ]; then
+            echo "DB_NAME is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DB_USER }}" ]; then
+            echo "DB_USER is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DB_PASSWORD }}" ]; then
+            echo "DB_PASSWORD is not set"
+            exit 1
+          fi
+
+      - name: Test Database Connection
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          python -c "
+          import psycopg2
+          import os
+          
+          print('Testing connection with these parameters:')
+          print(f'Host: {os.getenv(\"DB_HOST\")}')
+          print(f'Port: {os.getenv(\"DB_PORT\")}')
+          print(f'Database: {os.getenv(\"DB_NAME\")}')
+          print(f'User: {os.getenv(\"DB_USER\")}')
+          
+          try:
+              conn = psycopg2.connect(
+                  host=os.getenv('DB_HOST'),
+                  port=os.getenv('DB_PORT'),
+                  database=os.getenv('DB_NAME'),
+                  user=os.getenv('DB_USER'),
+                  password=os.getenv('DB_PASSWORD')
+              )
+              print('Database connection successful!')
+              conn.close()
+          except Exception as e:
+              print(f'Connection error: {e}')
+              exit(1)
+          "
+
+      - name: Execute Training Script
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          python model_training.py

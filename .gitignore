@@ -1,6 +1,3 @@
-*.csv
-mlflow_experiments
-# pychace
-__pycache__/
-.vscode
-*.pkl
+*datas
+*__pycache__
+*.pyc
