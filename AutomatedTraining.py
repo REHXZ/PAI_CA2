@@ -1,3 +1,23 @@
+import os
+import json
+import time
+import mlflow
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    average_precision_score,
+)
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.model_selection import learning_curve
+
 class BaseExperimentTracker:
     def __init__(self, experiment_name, checkpoint_file="experiment_checkpoint.json"):
         self.experiment_name = experiment_name
@@ -95,7 +115,7 @@ class AutomatedTraining(BaseExperimentTracker):
         timestamp = time.strftime("%Y%m%d%H%M")  # Add timestamp for uniqueness
         return f"{model_abbr}_{timestamp}_automated"
 
-    def run_experiments(self, X_train, y_train, X_test, y_test):
+    def run_experiments(self, X_train, y_train, X_test, y_test, categorical_cols, numeric_columns):
         from sklearn.ensemble import RandomForestClassifier
         
         # Create basic configuration
@@ -119,19 +139,33 @@ class AutomatedTraining(BaseExperimentTracker):
             with mlflow.start_run(run_name=run_id):
                 # Add descriptive run tags
                 mlflow.set_tag("model_type", config['models']['name'])
-                mlflow.set_tag("training_type", "automated")
                 
-                # Train the model
-                model = config['models']['instance']
-                start_time = time.time()
-                model.fit(X_train, y_train.ravel())
-                training_time = time.time() - start_time
+                # Build preprocessing pipeline
+                transformers = []
+                transformers.append(('scaler', MinMaxScaler(), numeric_columns))
+                transformers.append(('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=True), categorical_cols))
+                transformers.append(('drop_categorical', 'drop', categorical_cols))
+                preprocessor = ColumnTransformer(transformers=transformers, remainder='passthrough')
+                pipeline = Pipeline(steps=[
+                    ('preprocessor', preprocessor),
+                    ('model', config['models']['instance']),
+                ])
+
+                # Train the pipeline
+                y_train_series = y_train.squeeze()  # Convert to Pandas Series
+                pipeline.fit(X_train, y_train_series)
                 
-                # Make predictions
-                train_predictions = model.predict(X_train)
-                train_probabilities = model.predict_proba(X_train)[:, 1]
-                test_predictions = model.predict(X_test)
-                test_probabilities = model.predict_proba(X_test)[:, 1]
+                # Make predictionsif pipeline.classes_.shape[0] > 1:  # Ensure there are two classes
+                if pipeline.classes_.shape[0] > 1:  # Ensure there are two classes
+                    train_probabilities = pipeline.predict_proba(X_train)[:, 1]
+                    test_probabilities = pipeline.predict_proba(X_test)[:, 1]
+                else:
+                    train_probabilities = pipeline.predict_proba(X_train)[:, 0]  # Use single-class probability
+                    test_probabilities = pipeline.predict_proba(X_test)[:, 0]
+
+
+                train_predictions = pipeline.predict(X_train)
+                test_predictions = pipeline.predict(X_test)
                 
                 # Calculate metrics
                 metrics = self.evaluate_metrics(
@@ -144,21 +178,13 @@ class AutomatedTraining(BaseExperimentTracker):
                 
                 # Log metrics and parameters
                 mlflow.log_metrics(metrics)
-                mlflow.log_metric("training_time", training_time)
-                mlflow.log_params({
-                    "n_estimators": model.n_estimators,
-                    "max_depth": model.max_depth
-                })
                 
                 # Log the model
-                mlflow.sklearn.log_model(
-                    model,
-                    "model",
-                    input_example=X_train.iloc[0:1]
-                )
+                mlflow.sklearn.log_model(pipeline, "model", input_example=X_train.iloc[0:1])
+
                 
                 # Generate and save learning curves
-                learning_curve_path = self.plot_learning_curves(model, X_train, y_train)
+                learning_curve_path = self.plot_learning_curves(pipeline, X_train, y_train)
                 mlflow.log_artifact(learning_curve_path, artifact_path="learning_curves")
                 
                 # Mark run as completed
@@ -175,4 +201,4 @@ class AutomatedTraining(BaseExperimentTracker):
             print('Ending automated training run')
             mlflow.end_run()
             
-        return model, test_f1_score
+        return pipeline, test_f1_score

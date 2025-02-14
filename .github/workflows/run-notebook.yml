@@ -1,4 +1,4 @@
-name: Run Jupyter Notebook on Data Update
+name: Run Automated Training on Data Update
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write  # ✅ Allow GitHub Actions to push changes
 
 jobs:
-  run-notebook:
+  run-automated-training:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -23,17 +23,9 @@ jobs:
           python-version: "3.9"
 
       - name: Install dependencies
-        run: pip install jupyter pandas papermill psycopg2
-
-      - name: Execute Notebook
         run: |
-          papermill your_notebook.ipynb output_notebook.ipynb
-          ls -l  # ✅ Debugging: Check if the output notebook exists
-
-      - name: Commit and Push Results
+          pip install -r requirements.txt  # Ensure your dependencies are listed in a requirements.txt file
+          
+      - name: Run Automated Training
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add output_notebook.ipynb
-          git commit -m "Updated notebook results" || echo "No changes to commit"
-          git push
+          python automatedtraining.py  # Run the script for automated training
