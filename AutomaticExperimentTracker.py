@@ -108,7 +108,7 @@ class BaseExperimentTracker:
         # To be implemented by subclasses
         raise NotImplementedError
 
-class AutomatedTraining(BaseExperimentTracker):
+class Tracker(BaseExperimentTracker):
     def generate_run_id(self, config):
         """Generate a concise, unique identifier for a run configuration."""
         model_abbr = config['models']['name'][:2].upper()  # Abbreviate model name

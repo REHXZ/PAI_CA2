@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import itertools
-from AutomatedTraining import AutomatedTraining
+from AutomaticExperimentTracker import Tracker
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -50,8 +50,10 @@ def get_last_row_count():
     """Read the last row count from the file."""
     if os.path.exists(ROW_COUNT_FILE):
         with open(ROW_COUNT_FILE, "r") as f:
-            return int(f.read().strip())
-    return 0  # Default to 0 if the file doesn't exist
+            content = f.read().strip()
+            if content.isdigit():  # Check if the content is a valid integer
+                return int(content)
+    return 0
 
 def save_last_row_count(count):
     """Save the current row count to the file."""
@@ -116,7 +118,7 @@ if current_row_count > last_row_count:
     numeric_columns = ['order_value', 'refund_value', 'num_items_ordered', 'days_since_first_order',
                     'order_date_day_of_week', 'order_date_day', 'order_date_month', 'order_date_year']
 
-    tracker = AutomatedTraining('Automated Training')
+    tracker = Tracker('Automated Training')
     tracker.run_experiments(X_train, y_train, X_test, y_test, categorical_cols, numeric_columns)
     save_last_row_count(current_row_count)
 

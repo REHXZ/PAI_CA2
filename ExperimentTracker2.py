@@ -733,5 +733,3 @@ class PhaseSevenExperimentTracker(BaseExperimentTracker):
                         print('end run')
                         mlflow.end_run()  # Ensure the run is properly ended
             client.close()
-
-
