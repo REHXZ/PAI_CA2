@@ -11,7 +11,7 @@ permissions:
   contents: write  # ✅ Allow GitHub Actions to push changes
 
 jobs:
-  run-automated-training:
+  run-notebook:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -24,8 +24,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt  # Ensure your dependencies are listed in a requirements.txt file
-          
-      - name: Run Automated Training
+          pip install papermill
+
+      - name: Execute Notebook for Automated Training
         run: |
-          papermill  model_training.ipynb  # Run the script for automated training
+          papermill model_training.ipynb model_training_output.ipynb
