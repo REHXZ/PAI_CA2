@@ -3,4 +3,3 @@ mlflow_experiments
 # pychace
 __pycache__/# 
 .gitignore
-.env
