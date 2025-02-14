@@ -9,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # Connection details
 DB_HOST = os.getenv("DB_HOST")
