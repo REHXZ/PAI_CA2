@@ -1,4 +1,6 @@
 *datas
 mlflow_experiments
 # pychace
-__pycache__/
+__pycache__/# 
+.gitignore
+.env

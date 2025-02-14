@@ -1,5 +1,4 @@
 import pandas as pd
-import pandas as pd
 import numpy as np
 import os
 import itertools
@@ -10,9 +9,37 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
+from sqlalchemy import create_engine
 
-# import data
-df = pd.read_csv('data/merged_data.csv')
+# Connection details
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+
+# Create a connection string
+connection_string = (
+    f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
+
+# Create an engine
+engine = create_engine(connection_string)
+
+# Query data
+query = "SELECT * FROM merged_data;"
+df = pd.read_sql(query, engine)
+
+# Create an engine
+engine = create_engine(connection_string)
+
+# Test the connection
+try:
+    with engine.connect() as conn:
+        print("Connection successful!")
+except Exception as e:
+    print(f"Error connecting to the database: {e}")
 
 # Convert data types for memory efficiency
 def convert_dtypes(df):
