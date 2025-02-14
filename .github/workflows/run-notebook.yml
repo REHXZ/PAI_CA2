@@ -22,6 +22,10 @@ jobs:
         with:
           python-version: "3.9"
 
+      - name: Install Dependencies
+        run: |
+          pip install requirements.txt
+
       # - name: Install dependencies
       #   run: |
       #     pip install papermill jupyter
