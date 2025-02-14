@@ -43,55 +43,88 @@ try:
 except Exception as e:
     print(f"Error connecting to the database: {e}")
 
-# Convert data types for memory efficiency
-def convert_dtypes(df):
-    df['order_value'] = df['order_value'].astype('float32')
-    df['refund_value'] = df['refund_value'].astype('float32')
-    df['num_items_ordered'] = df['num_items_ordered'].astype(float).round().astype('uint8')
-    df['order_date'] = pd.to_datetime(df['order_date'])
-    df['first_order_datetime'] = pd.to_datetime(df['first_order_datetime'])
-    df[['country_code', 'collect_type', 'payment_method']] = df[['country_code', 'collect_type', 'payment_method']].astype('category')
-    return df
+# File to store the last row count
+ROW_COUNT_FILE = "last_row_count.txt"
 
-df = convert_dtypes(df)
+def get_last_row_count():
+    """Read the last row count from the file."""
+    if os.path.exists(ROW_COUNT_FILE):
+        with open(ROW_COUNT_FILE, "r") as f:
+            return int(f.read().strip())
+    return 0  # Default to 0 if the file doesn't exist
 
-# Payment method grouping
-def group_payment_methods(payment_method):
-    mapping = {
-        'CreditCard': ['GenericCreditCard', 'CybersourceCreditCard', 'CybersourceApplePay', 'CreditCard'],
-        'DigitalWallet': ['GCash', 'AFbKash', 'JazzCashWallet', 'AdyenBoost', 'PayPal'],
-        'BankTransfer': ['XenditDirectDebit', 'RazerOnlineBanking'],
-        'PaymentOnDelivery': ['Invoice', 'PayOnDelivery']
-    }
-    for key, values in mapping.items():
-        if payment_method in values:
-            return key
-    return 'Others'
+def save_last_row_count(count):
+    """Save the current row count to the file."""
+    with open(ROW_COUNT_FILE, "w") as f:
+        f.write(str(count))
 
-df['payment_method'] = df['payment_method'].map(group_payment_methods)
+def get_current_row_count():
+    """Query the database for the current row count."""
+    query = "SELECT COUNT(*) FROM your_table;"
+    with engine.connect() as conn:
+        result = conn.execute(text(query)).scalar()
+    return result
 
-# Date transformations
-def date_transformations(df):
-    df['days_since_first_order'] = (df['order_date'] - df['first_order_datetime']).dt.days
-    df = df.drop(columns=['first_order_datetime'])
-    df['order_date_day_of_week'] = df['order_date'].dt.dayofweek
-    df['order_date_day'] = df['order_date'].dt.day
-    df['order_date_month'] = df['order_date'].dt.month
-    df['order_date_year'] = df['order_date'].dt.year
-    df = df.drop(columns=['order_date'])
-    return df
+last_row_count = get_last_row_count()
+current_row_count = get_current_row_count()
 
-df = date_transformations(df)
-df = df.drop(columns=['order_id', 'customer_id'])
+if current_row_count > last_row_count:
+        print("New data detected. Running the script...")
 
-# Split data
-X = df.drop(columns=['is_fraud'])
-y = df['is_fraud']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Convert data types for memory efficiency
+    def convert_dtypes(df):
+        df['order_value'] = df['order_value'].astype('float32')
+        df['refund_value'] = df['refund_value'].astype('float32')
+        df['num_items_ordered'] = df['num_items_ordered'].astype(float).round().astype('uint8')
+        df['order_date'] = pd.to_datetime(df['order_date'])
+        df['first_order_datetime'] = pd.to_datetime(df['first_order_datetime'])
+        df[['country_code', 'collect_type', 'payment_method']] = df[['country_code', 'collect_type', 'payment_method']].astype('category')
+        return df
 
-categorical_cols = ['payment_method', 'country_code', 'collect_type']
-numeric_columns = ['order_value', 'refund_value', 'num_items_ordered', 'days_since_first_order',
-                   'order_date_day_of_week', 'order_date_day', 'order_date_month', 'order_date_year']
+    df = convert_dtypes(df)
 
-tracker = AutomatedTraining('Automated Training')
-tracker.run_experiments(X_train, y_train, X_test, y_test, categorical_cols, numeric_columns)
+    # Payment method grouping
+    def group_payment_methods(payment_method):
+        mapping = {
+            'CreditCard': ['GenericCreditCard', 'CybersourceCreditCard', 'CybersourceApplePay', 'CreditCard'],
+            'DigitalWallet': ['GCash', 'AFbKash', 'JazzCashWallet', 'AdyenBoost', 'PayPal'],
+            'BankTransfer': ['XenditDirectDebit', 'RazerOnlineBanking'],
+            'PaymentOnDelivery': ['Invoice', 'PayOnDelivery']
+        }
+        for key, values in mapping.items():
+            if payment_method in values:
+                return key
+        return 'Others'
+
+    df['payment_method'] = df['payment_method'].map(group_payment_methods)
+
+    # Date transformations
+    def date_transformations(df):
+        df['days_since_first_order'] = (df['order_date'] - df['first_order_datetime']).dt.days
+        df = df.drop(columns=['first_order_datetime'])
+        df['order_date_day_of_week'] = df['order_date'].dt.dayofweek
+        df['order_date_day'] = df['order_date'].dt.day
+        df['order_date_month'] = df['order_date'].dt.month
+        df['order_date_year'] = df['order_date'].dt.year
+        df = df.drop(columns=['order_date'])
+        return df
+
+    df = date_transformations(df)
+    df = df.drop(columns=['order_id', 'customer_id'])
+
+    # Split data
+    X = df.drop(columns=['is_fraud'])
+    y = df['is_fraud']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    categorical_cols = ['payment_method', 'country_code', 'collect_type']
+    numeric_columns = ['order_value', 'refund_value', 'num_items_ordered', 'days_since_first_order',
+                    'order_date_day_of_week', 'order_date_day', 'order_date_month', 'order_date_year']
+
+    tracker = AutomatedTraining('Automated Training')
+    tracker.run_experiments(X_train, y_train, X_test, y_test, categorical_cols, numeric_columns)
+    save_last_row_count(current_row_count)
+
+else:
+    print("No new data. Exiting...")
+    exit(0)
